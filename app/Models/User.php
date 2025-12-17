@@ -40,6 +40,11 @@ class User extends Authenticatable implements MustVerifyEmail
         );
     }
 
+    public function getAbilities(): array
+    {
+        return $this->role->abilities();
+    }
+
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class);
@@ -52,16 +57,16 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isAdmin(): bool
     {
-        return $this->role === UserRole::Admin;
+        return $this->role === UserRole::ADMIN;
     }
 
     public function isEditor(): bool
     {
-        return $this->role === UserRole::Editor;
+        return $this->role === UserRole::EDITOR;
     }
 
     public function isViewer(): bool
     {
-        return $this->role === UserRole::Viewer;
+        return $this->role === UserRole::VIEWER;
     }
 }
