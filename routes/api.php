@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\MetaController;
@@ -54,6 +55,12 @@ Route::prefix('email')->group(function () {
 Route::middleware(['auth:sanctum', 'verified'])->group(function () {
     Route::apiResource('posts', PostController::class);
     Route::apiResource('comments', CommentController::class);
+
+    Route::prefix('analytics')->group(function () {
+        Route::get('posts', [AnalyticsController::class, 'posts']);
+        Route::get('comments', [AnalyticsController::class, 'comments']);
+        Route::get('users', [AnalyticsController::class, 'users']);
+    });
 });
 
 /*
