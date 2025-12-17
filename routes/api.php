@@ -23,9 +23,9 @@ use Illuminate\Support\Facades\Route;
 | Authentication
 |--------------------------------------------------------------------------
 */
-Route::prefix('auth')->group(function () {
+Route::prefix('auth')->middleware('throttle:api.auth')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
-    Route::post('login', [AuthController::class, 'login'])->name('login');
+    Route::post('login', [AuthController::class, 'login']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
@@ -37,14 +37,9 @@ Route::prefix('auth')->group(function () {
 | Email Verification
 |--------------------------------------------------------------------------
 */
-Route::prefix('email')->group(function () {
-    Route::get('verify/{id}/{hash}', [AuthController::class, 'verify'])
-        ->middleware(['signed', 'throttle:6,1'])
-        ->name('verification.verify');
-
-    Route::post('verification-notification', [AuthController::class, 'resend'])
-        ->middleware(['throttle:6,1'])
-        ->name('verification.send');
+Route::prefix('email')->middleware('throttle:6,1')->group(function () {
+    Route::get('verify/{id}/{hash}', [AuthController::class, 'verify'])->name('verification.verify');
+    Route::post('verification-notification', [AuthController::class, 'resend'])->name('verification.send');
 });
 
 /*

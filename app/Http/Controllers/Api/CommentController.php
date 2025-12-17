@@ -10,6 +10,7 @@ use App\Models\Comment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Cache;
 
 class CommentController extends Controller
 {
@@ -20,24 +21,21 @@ class CommentController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $query = Comment::with(['author', 'post']);
+        $cacheKey = 'comments_index_' . md5(json_encode($request->all()));
 
-        if ($request->has('post_id')) {
-            $query->where('post_id', $request->post_id);
-        }
-
-        $comments = $query->latest()->paginate(10);
-
-        return CommentResource::collection($comments);
+        return CommentResource::collection(Cache::tags(['comments'])->remember($cacheKey, 600, function () use ($request) {
+            return Comment::with(['author', 'post'])
+                ->when($request->post_id, fn($q) => $q->where('post_id', $request->post_id))
+                ->latest()
+                ->paginate(10);
+        }));
     }
 
     public function store(StoreCommentRequest $request): CommentResource
     {
-        $validated = $request->validated();
+        $comment = $request->user()->comments()->create($request->validated());
 
-        $comment = new Comment($validated);
-        $comment->author_id = $request->user()->id;
-        $comment->save();
+        Cache::tags(['comments', 'posts'])->flush();
 
         return new CommentResource($comment->load('author'));
     }
@@ -51,12 +49,16 @@ class CommentController extends Controller
     {
         $comment->update($request->validated());
 
+        Cache::tags(['comments'])->flush();
+
         return new CommentResource($comment->load('author'));
     }
 
     public function destroy(Comment $comment): JsonResponse
     {
         $comment->delete();
+
+        Cache::tags(['comments', 'posts'])->flush();
 
         return response()->json(['message' => 'Comment deleted']);
     }

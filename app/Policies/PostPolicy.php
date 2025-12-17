@@ -11,11 +11,13 @@ class PostPolicy
 {
     use HandlesAuthorization;
 
-    public function before(User $user, $ability)
+    public function before(User $user, $ability): ?bool
     {
         if ($user->isAdmin() || $user->tokenCan(TokenAbility::ALL->value)) {
             return true;
         }
+
+        return null;
     }
 
     public function viewAny(User $user): bool

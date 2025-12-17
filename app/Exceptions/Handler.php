@@ -6,6 +6,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -35,38 +36,32 @@ class Handler extends ExceptionHandler
      */
     protected function getErrorResponseForApi(Throwable $e): SymfonyResponse|JsonResponse
     {
-        if ($e instanceof AuthenticationException) {
-            return $this->jsonResponse([
-                'errors' => [['message' => $e->getMessage()]]
-            ], SymfonyResponse::HTTP_UNAUTHORIZED);
-        }
-
-        if ($e instanceof AuthorizationException) {
-            return $this->jsonResponse([
-                'errors' => [['message' => $e->getMessage()]]
-            ], SymfonyResponse::HTTP_FORBIDDEN);
-        }
-
         if ($e instanceof ValidationException) {
-            return $this->jsonResponse([
-                'errors' => [$e->validator->getMessageBag()->toArray()]
-            ], SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY);
+            return $this->jsonResponse(
+                ['messages' => [$e->validator->getMessageBag()->toArray()]],
+                SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY
+            );
         }
 
         if ($e instanceof ModelNotFoundException) {
-            return $this->jsonResponse([
-                'errors' => [['message' => 'Resource not found.']]
-            ], SymfonyResponse::HTTP_NOT_FOUND);
+            return $this->jsonResponse(
+                ['message' => 'Resource not found.'],
+                SymfonyResponse::HTTP_NOT_FOUND
+            );
         }
 
-        $code = $e->getCode();
+        $code = match (true) {
+            $e instanceof AuthenticationException => SymfonyResponse::HTTP_UNAUTHORIZED,
+            $e instanceof AuthorizationException => SymfonyResponse::HTTP_FORBIDDEN,
+            $e instanceof ThrottleRequestsException => SymfonyResponse::HTTP_TOO_MANY_REQUESTS,
+            default => $e->getCode(),
+        };
+
         $message = app()->environment('production') ? 'Unhandled error' : $e->getMessage();
 
         $httpCode = ($code >= 300 && $code <= 599) ? $code : 500;
 
-        return $this->jsonResponse([
-            'errors' => [['message' => $message]]
-        ], $httpCode);
+        return $this->jsonResponse(['message' => $message], $httpCode);
     }
 
     protected function isApiRequest(Request $request): bool

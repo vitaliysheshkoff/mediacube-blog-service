@@ -7,6 +7,8 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -46,7 +48,25 @@ class RouteServiceProvider extends ServiceProvider
     protected function configureRateLimiting()
     {
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            $maxAttempts = $request->isMethod('GET') ? 60 : 20;
+
+            return Limit::perMinute($maxAttempts)
+                ->by($request->user()?->id ?: $request->ip())
+                ->response(fn(Request $request, array $headers) => throw new TooManyRequestsHttpException(
+                    message: 'Too many requests. Please try again later.',
+                    code: SymfonyResponse::HTTP_TOO_MANY_REQUESTS,
+                    headers: $headers
+                ));
+        });
+
+        RateLimiter::for('api.auth', function (Request $request) {
+            return Limit::perMinute(5)
+                ->by($request->ip())
+                ->response(fn(Request $request, array $headers) => throw new TooManyRequestsHttpException(
+                    message: 'Too many login attempts. Please try again in a minute.',
+                    code: SymfonyResponse::HTTP_TOO_MANY_REQUESTS,
+                    headers: $headers
+                ));
         });
     }
 }

@@ -11,19 +11,21 @@ class CommentPolicy
 {
     use HandlesAuthorization;
 
-    public function before(User $user, $ability)
+    public function before(User $user, $ability): ?bool
     {
         if ($user->isAdmin() || $user->tokenCan(TokenAbility::ALL->value)) {
             return true;
         }
+
+        return null;
     }
 
-    public function viewAny(User $user)
+    public function viewAny(User $user): bool
     {
         return true;
     }
 
-    public function view(User $user, Comment $comment): true
+    public function view(User $user, Comment $comment): bool
     {
         return true;
     }
