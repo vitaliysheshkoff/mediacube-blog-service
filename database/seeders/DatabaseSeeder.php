@@ -14,14 +14,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        if (app()->environment('local')) {
-            User::factory()->create([
-                'name' => 'Admin User',
-                'email' => 'test@example.com',
-                'password' => 'password',
-                'role' => 'admin',
-            ]);
-        }
-
+        $this->call([
+            UserSeeder::class,
+            PostSeeder::class,
+            CommentSeeder::class,
+        ]);
     }
 }

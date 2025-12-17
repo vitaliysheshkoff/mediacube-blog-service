@@ -7,7 +7,9 @@ use App\Http\Requests\Comment\StoreCommentRequest;
 use App\Http\Requests\Comment\UpdateCommentRequest;
 use App\Http\Resources\CommentResource;
 use App\Models\Comment;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class CommentController extends Controller
 {
@@ -16,7 +18,7 @@ class CommentController extends Controller
         $this->authorizeResource(Comment::class, 'comment');
     }
 
-    public function index(Request $request)
+    public function index(Request $request): AnonymousResourceCollection
     {
         $query = Comment::with(['author', 'post']);
 
@@ -29,7 +31,7 @@ class CommentController extends Controller
         return CommentResource::collection($comments);
     }
 
-    public function store(StoreCommentRequest $request)
+    public function store(StoreCommentRequest $request): CommentResource
     {
         $validated = $request->validated();
 
@@ -40,19 +42,19 @@ class CommentController extends Controller
         return new CommentResource($comment->load('author'));
     }
 
-    public function show(Comment $comment)
+    public function show(Comment $comment): CommentResource
     {
         return new CommentResource($comment->load(['author']));
     }
 
-    public function update(UpdateCommentRequest $request, Comment $comment)
+    public function update(UpdateCommentRequest $request, Comment $comment): CommentResource
     {
         $comment->update($request->validated());
 
         return new CommentResource($comment->load('author'));
     }
 
-    public function destroy(Comment $comment)
+    public function destroy(Comment $comment): JsonResponse
     {
         $comment->delete();
 

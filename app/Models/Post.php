@@ -32,4 +32,30 @@ class Post extends Model
     {
         return $this->hasMany(Comment::class);
     }
+
+    public function lastComment()
+    {
+        return $this->hasOne(Comment::class)->latestOfMany();
+    }
+
+    public function scopeSearch($query, $search): void
+    {
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'ilike', "%{$search}%")
+                    ->orWhere('body', 'ilike', "%{$search}%");
+            });
+        }
+    }
+
+    public function scopePublishedBetween($query, $from, $to): void
+    {
+        if ($from) {
+            $query->where('published_at', '>=', $from);
+        }
+
+        if ($to) {
+            $query->where('published_at', '<=', $to);
+        }
+    }
 }
