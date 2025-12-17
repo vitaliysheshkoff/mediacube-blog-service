@@ -2,49 +2,80 @@
 
 namespace App\Exceptions;
 
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Throwable;
 
 class Handler extends ExceptionHandler
 {
-    /**
-     * A list of exception types with their corresponding custom log levels.
-     *
-     * @var array<class-string<\Throwable>, \Psr\Log\LogLevel::*>
-     */
-    protected $levels = [
-        //
-    ];
-
-    /**
-     * A list of the exception types that are not reported.
-     *
-     * @var array<int, class-string<\Throwable>>
-     */
-    protected $dontReport = [
-        //
-    ];
-
-    /**
-     * A list of the inputs that are never flashed to the session on validation exceptions.
-     *
-     * @var array<int, string>
-     */
     protected $dontFlash = [
         'current_password',
         'password',
         'password_confirmation',
     ];
 
-    /**
-     * Register the exception handling callbacks for the application.
-     *
-     * @return void
-     */
-    public function register()
+    public function render($request, Throwable $e): SymfonyResponse|JsonResponse
     {
-        $this->reportable(function (Throwable $e) {
-            //
-        });
+        if ($this->isApiRequest($request)) {
+            return $this->getErrorResponseForApi($e);
+        }
+
+        return parent::render($request, $e);
+    }
+
+    /**
+     * @param Throwable $e
+     * @return JsonResponse|SymfonyResponse
+     */
+    protected function getErrorResponseForApi(Throwable $e): SymfonyResponse|JsonResponse
+    {
+        if ($e instanceof AuthenticationException) {
+            return $this->jsonResponse([
+                'errors' => [['message' => $e->getMessage()]]
+            ], SymfonyResponse::HTTP_UNAUTHORIZED);
+        }
+
+        if ($e instanceof ValidationException) {
+            return $this->jsonResponse([
+                'errors' => [$e->validator->getMessageBag()->toArray()]
+            ], SymfonyResponse::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        if ($e instanceof ModelNotFoundException) {
+            return $this->jsonResponse([
+                'errors' => [['message' => 'Resource not found.']]
+            ], SymfonyResponse::HTTP_NOT_FOUND);
+        }
+
+        $code = $e->getCode();
+        $message = app()->environment('production') ? 'Unhandled error' : $e->getMessage();
+
+        $httpCode = ($code >= 300 && $code <= 599) ? $code : 500;
+
+        return $this->jsonResponse([
+            'errors' => [['message' => $message]]
+        ], $httpCode);
+    }
+
+    protected function isApiRequest(Request $request): bool
+    {
+        return $request->is('api/*');
+    }
+
+    protected function shouldReturnJson($request, Throwable $e): bool
+    {
+        return $this->isApiRequest($request) || parent::shouldReturnJson($request, $e);
+    }
+
+    protected function jsonResponse(array $payload = null, int $statusCode = 404): SymfonyResponse|JsonResponse
+    {
+        $payload = $payload ?: [];
+
+        return response()->json($payload, $statusCode);
     }
 }
