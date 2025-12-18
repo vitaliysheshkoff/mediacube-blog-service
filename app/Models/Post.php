@@ -35,7 +35,7 @@ class Post extends Model
 
     public function lastComment()
     {
-        return $this->hasOne(Comment::class)->latestOfMany();
+        return $this->hasOne(Comment::class)->latestOfMany('created_at');
     }
 
     public function scopeSearch($query, $search): void

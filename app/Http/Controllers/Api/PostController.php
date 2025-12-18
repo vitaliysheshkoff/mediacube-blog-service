@@ -63,7 +63,6 @@ class PostController extends Controller
                     'title' => ['The title has already been taken.'],
                 ]);
             }
-            throw $e;
         }
 
         Cache::tags(['posts'])->flush();
@@ -88,7 +87,6 @@ class PostController extends Controller
                     'title' => ['The title has already been taken.'],
                 ]);
             }
-            throw $e;
         }
 
         Cache::tags(['posts'])->flush();
