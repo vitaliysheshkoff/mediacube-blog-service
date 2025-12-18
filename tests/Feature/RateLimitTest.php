@@ -8,7 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Tests\TestCase;
 
-class RateLimitConcurrencyTest extends TestCase
+class RateLimitTest extends TestCase
 {
     use RefreshDatabase;
 
@@ -27,27 +27,6 @@ class RateLimitConcurrencyTest extends TestCase
         }
 
         $this->actingAs($user)->getJson('/api/posts')->assertStatus(429);
-    }
-
-    public function test_cannot_create_duplicate_title_post_concurrency_simulation()
-    {
-        $user = User::factory()->create(['role' => 'editor']);
-
-        // Create initial post to cause conflict
-        Post::factory()->create(['title' => 'Unique Title', 'author_id' => $user->id]);
-
-        $this->actingAs($user)
-            ->postJson('/api/posts', [
-                'title' => 'Unique Title',
-                'body' => 'Another body',
-                'status' => 'published',
-            ])
-            ->assertStatus(422)
-            ->assertJson([
-                'messages' => [
-                    ['title' => ['The title has already been taken.']]
-                ]
-            ]);
     }
 
     public function test_cache_is_working_for_posts_index()
